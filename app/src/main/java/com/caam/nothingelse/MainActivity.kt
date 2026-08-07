@@ -5,32 +5,34 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.edit
+import com.caam.nothingelse.data.AppDatabase
+import com.caam.nothingelse.data.Note
+import androidx.room.Room
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val prefs = getSharedPreferences("notes", MODE_PRIVATE)
+        val db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "nothingelse-db").allowMainThreadQueries().build()
+        val dao = db.noteDao()
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    val ctx = LocalContext.current
-                    val note = remember { mutableStateOf(prefs.getString("note", "") ?: "") }
+                    val notes = remember { mutableStateOf(dao.getAll()) }
                     Column {
-                        BasicTextField(value = note.value, onValueChange = { note.value = it })
+                        TopAppBar(title = { Text("NothingElse") })
                         Button(onClick = {
-                            prefs.edit { putString("note", note.value) }
-                        }) {
-                            Text("Save")
+                            val id = dao.insert(Note(title = "New note", body = ""))
+                            notes.value = dao.getAll()
+                        }) { Text("New") }
+                        LazyColumn {
+                            items(notes.value) { n ->
+                                ListItem(headlineText = { Text(n.title.ifEmpty { "(no title)" }) }, supportingText = { Text(n.body.take(80)) })
+                            }
                         }
                     }
                 }
@@ -38,4 +40,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
