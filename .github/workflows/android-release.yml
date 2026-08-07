@@ -1,9 +1,7 @@
 name: Android Release CI
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -29,4 +27,3 @@ jobs:
         with:
           name: app-release-apk
           path: app/build/outputs/apk/release/*.apk
-
