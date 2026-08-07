@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Minimal white-background rounded-square launcher icon with centered 'N' (#1E88E5) -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/white" />
+    <foreground>
+        <!-- Rounded square badge with centered N -->
+        <vector android:height="1080dp" android:width="1080dp" android:viewportHeight="1080" android:viewportWidth="1080">
+            <!-- rounded rect -->
+            <path
+                android:fillColor="#FFFFFF"
+                android:pathData="M1080,270c0,149.6 -120.4,270 -270,270h-270c-149.6,0 -270,-120.4 -270,-270v-270c0,-149.6 120.4,-270 270,-270h270c149.6,0 270,120.4 270,270v270z" />
+            <!-- blue N -->
+            <path
+                android:fillColor="#1E88E5"
+                android:pathData="M340,800 L340,280 L460,280 L700,640 L700,280 L820,280 L820,800 L700,800 L460,360 L460,800z" />
+        </vector>
+    </foreground>
+</adaptive-icon>
+
