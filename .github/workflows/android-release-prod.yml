@@ -55,6 +55,13 @@ jobs:
           echo "KEY_ALIAS=${{ secrets.KEY_ALIAS || '' }}" >> $GITHUB_ENV
           echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD || '' }}" >> $GITHUB_ENV
 
+      - name: Validate signing secrets
+        run: |
+          if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ] || [ -z "${{ secrets.KEYSTORE_PASSWORD }}" ] || [ -z "${{ secrets.KEY_ALIAS }}" ] || [ -z "${{ secrets.KEY_PASSWORD }}" ]; then
+            echo "Required signing secrets are missing. Please set KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD." >&2
+            exit 1
+          fi
+
       - name: Build release (assembleRelease)
         run: ./gradlew :app:assembleRelease --no-daemon --stacktrace --warning-mode=all
 
