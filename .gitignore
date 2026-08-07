@@ -11,3 +11,8 @@ local.properties
 /.cxx/
 /.externalNativeBuild/
 
+# Ignore signing and keystore artifacts generated or stored locally
+signing/
+*.jks
+*.base64
+
