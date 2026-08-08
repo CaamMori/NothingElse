@@ -13,16 +13,21 @@ import androidx.compose.ui.unit.sp
 
 private val Ink = Color(0xFF0D0D0F)
 private val Paper = Color(0xFFFFFEFA)
-private val Night = Color(0xFF111112)
+private val Night = Color(0xFF101113)
 private val Blue = Color(0xFF0A70C7)
 
 private val LightPalette = lightColorScheme(
-    primary = Blue, background = Paper, surface = Paper, onBackground = Ink, onSurface = Ink,
-    onSurfaceVariant = Color(0xFF74716C), outlineVariant = Color(0xFFE5E1DA), error = Color(0xFFB3261E)
+    primary = Blue, onPrimary = Color.White, background = Paper, surface = Paper,
+    surfaceVariant = Color(0xFFF2EFE8), onBackground = Ink, onSurface = Ink,
+    onSurfaceVariant = Color(0xFF625F5A), outline = Color(0xFFB8B3AA),
+    outlineVariant = Color(0xFFE5E1DA), error = Color(0xFFB3261E), onError = Color.White
 )
 private val DarkPalette = darkColorScheme(
-    primary = Color(0xFF8FC7FF), background = Night, surface = Night, onBackground = Color(0xFFF4F1EA),
-    onSurface = Color(0xFFF4F1EA), onSurfaceVariant = Color(0xFFA9A6A1), outlineVariant = Color(0xFF343332), error = Color(0xFFFFB4AB)
+    primary = Color(0xFF9DCEFF), onPrimary = Color(0xFF003258), background = Night,
+    surface = Color(0xFF191B1E), surfaceVariant = Color(0xFF24272B),
+    onBackground = Color(0xFFF4F1EA), onSurface = Color(0xFFF4F1EA),
+    onSurfaceVariant = Color(0xFFC4C7C9), outline = Color(0xFF909498),
+    outlineVariant = Color(0xFF41454A), error = Color(0xFFFFB4AB), onError = Color(0xFF690005)
 )
 
 private val QuietType = Typography(

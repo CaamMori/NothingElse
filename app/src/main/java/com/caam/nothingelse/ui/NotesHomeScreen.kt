@@ -2,6 +2,13 @@ package com.caam.nothingelse.ui
 
 import android.content.Intent
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,16 +26,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -53,54 +63,117 @@ import com.caam.nothingelse.data.Note
 import java.text.DateFormat
 import java.util.Date
 
+private enum class NoteFilter { Notes, Favorites }
+
 @Composable
 fun NotesHomeScreen(
-    notes: List<Note>, archivedNotes: List<Note>, onOpenNote: (Note) -> Unit,
+    notes: List<Note>, favoriteNotes: List<Note>, onOpenNote: (Note) -> Unit,
     onCreateNote: () -> Unit, onDeleteNote: (Note) -> Unit,
-    onSetPinned: (Note, Boolean) -> Unit, onSetArchived: (Note, Boolean) -> Unit
+    onSetPinned: (Note, Boolean) -> Unit, onSetFavorite: (Note, Boolean) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
-    var archive by remember { mutableStateOf(false) }
+    var filter by remember { mutableStateOf(NoteFilter.Notes) }
     var actionsFor by remember { mutableStateOf<Note?>(null) }
-    val source = if (archive) archivedNotes else notes
+    val source = if (filter == NoteFilter.Favorites) favoriteNotes else notes
     val visible = source.filter { it.title.contains(query, true) || it.body.contains(query, true) }
 
     BackHandler(enabled = actionsFor != null) { actionsFor = null }
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp, top = 30.dp), verticalAlignment = Alignment.Top) {
-                Column(Modifier.weight(1f)) {
-                    Text(if (archive) "Archive" else "Notes", style = MaterialTheme.typography.displaySmall)
-                    Spacer(Modifier.height(5.dp))
-                    Text("${source.size} ${if (archive) "archived" else if (source.size == 1) "note" else "notes"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                IconButton(onClick = onCreateNote) { Icon(Icons.Default.Add, "New note", tint = MaterialTheme.colorScheme.primary) }
-                IconButton(onClick = { archive = !archive }) { Icon(if (archive) Icons.Default.Unarchive else Icons.Default.Archive, "Archive", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-            }
-            InlineSearch(query, { query = it })
-            if (visible.isEmpty()) EmptyState(query.isNotBlank(), archive, Modifier.weight(1f))
-            else LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp)) {
-                items(visible, key = { it.id }) { note ->
-                    NoteRow(note, query, { onOpenNote(note) }, { actionsFor = note })
-                }
-            }
-        }
-        actionsFor?.let { note ->
-            ActionSheet(
-                note = note,
-                onDismiss = { actionsFor = null },
-                onPin = { onSetPinned(note, !note.pinned); actionsFor = null },
-                onArchive = { onSetArchived(note, !note.archived); actionsFor = null },
-                onDelete = { onDeleteNote(note); actionsFor = null }
+            HomeHeader(
+                filter = filter,
+                noteCount = source.size,
+                onFilterChange = { filter = it },
+                onCreateNote = onCreateNote
             )
+            InlineSearch(query, { query = it })
+            AnimatedContent(
+                targetState = visible.isEmpty(),
+                modifier = Modifier.weight(1f),
+                transitionSpec = { fadeIn(tween(160)) togetherWith fadeOut(tween(110)) },
+                label = "notes-content"
+            ) { empty ->
+                if (empty) EmptyState(query.isNotBlank(), filter, Modifier.fillMaxSize())
+                else LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    items(visible, key = { it.id }) { note ->
+                        NoteRow(note, query, { onOpenNote(note) }, { actionsFor = note })
+                    }
+                }
+            }
         }
+        AnimatedVisibility(
+            visible = actionsFor != null,
+            enter = fadeIn(tween(140)) + slideInVertically(tween(180)) { it / 5 },
+            exit = fadeOut(tween(100)) + slideOutVertically(tween(150)) { it / 5 }
+        ) {
+            actionsFor?.let { note ->
+                ActionSheet(
+                    note = note,
+                    onDismiss = { actionsFor = null },
+                    onPin = { onSetPinned(note, !note.pinned); actionsFor = null },
+                    onFavorite = { onSetFavorite(note, !note.archived); actionsFor = null },
+                    onDelete = { onDeleteNote(note); actionsFor = null }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeHeader(filter: NoteFilter, noteCount: Int, onFilterChange: (NoteFilter) -> Unit, onCreateNote: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp, top = 30.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(if (filter == NoteFilter.Favorites) "Favorites" else "Notes", style = MaterialTheme.typography.displaySmall)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "$noteCount ${if (noteCount == 1) "note" else "notes"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onCreateNote) {
+                Icon(Icons.Default.Add, "New note", tint = MaterialTheme.colorScheme.primary)
+            }
+        }
+        FilterControl(filter, onFilterChange, Modifier.padding(top = 20.dp, end = 12.dp))
+    }
+}
+
+@Composable
+private fun FilterControl(selected: NoteFilter, onSelect: (NoteFilter) -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier.clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(3.dp)
+    ) {
+        FilterOption("Notes", selected == NoteFilter.Notes) { onSelect(NoteFilter.Notes) }
+        FilterOption("Favorites", selected == NoteFilter.Favorites) { onSelect(NoteFilter.Favorites) }
+    }
+}
+
+@Composable
+private fun FilterOption(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.clip(RoundedCornerShape(7.dp))
+            .background(if (selected) MaterialTheme.colorScheme.surface else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 7.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal),
+            color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
 @Composable
 private fun InlineSearch(query: String, onQueryChange: (String) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 18.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(Icons.Default.Search, null, Modifier.size(19.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -111,24 +184,20 @@ private fun InlineSearch(query: String, onQueryChange: (String) -> Unit) {
             singleLine = true,
             modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Search notes" },
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-            decorationBox = { field ->
-                Box {
-                    if (query.isEmpty()) {
-                        Text("Search notes", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    field()
-                }
-            }
+            decorationBox = { field -> Box { if (query.isEmpty()) Text("Search notes", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant); field() } }
         )
     }
 }
 
 @Composable
 private fun NoteRow(note: Note, query: String, onOpen: () -> Unit, onActions: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(start = 24.dp, end = 18.dp, top = 13.dp, bottom = 14.dp), verticalAlignment = Alignment.Top) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(start = 24.dp, end = 12.dp, top = 14.dp, bottom = 14.dp),
+        verticalAlignment = Alignment.Top
+    ) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (note.pinned) { Icon(Icons.Default.PushPin, "Pinned", Modifier.size(13.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant); Spacer(Modifier.width(6.dp)) }
+                if (note.pinned) { Icon(Icons.Default.PushPin, "Pinned", Modifier.size(13.dp), tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.width(6.dp)) }
                 Text(highlight(note.title.ifBlank { "Untitled note" }, query), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (note.body.isNotBlank()) Text(highlight(note.body, query), Modifier.padding(top = 3.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -139,33 +208,26 @@ private fun NoteRow(note: Note, query: String, onOpen: () -> Unit, onActions: ()
 }
 
 @Composable
-private fun EmptyState(filtering: Boolean, archive: Boolean, modifier: Modifier) {
+private fun EmptyState(filtering: Boolean, filter: NoteFilter, modifier: Modifier) {
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text(if (filtering) "No matching notes" else if (archive) "Archive is empty" else "Nothing here yet", style = MaterialTheme.typography.titleMedium)
-        if (!filtering) Text(if (archive) "Archived notes will appear here." else "Tap + to begin.", Modifier.padding(top = 5.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(if (filtering) "No matching notes" else if (filter == NoteFilter.Favorites) "No favorites yet" else "Nothing here yet", style = MaterialTheme.typography.titleMedium)
+        if (!filtering) Text(if (filter == NoteFilter.Favorites) "Mark a note as a favorite to find it here." else "Create a note when something is worth keeping.", Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
-private fun ActionSheet(note: Note, onDismiss: () -> Unit, onPin: () -> Unit, onArchive: () -> Unit, onDelete: () -> Unit) {
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .28f)).clickable(onClick = onDismiss), contentAlignment = Alignment.BottomCenter) {
-        Column(
-            Modifier.fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .navigationBarsPadding()
-                .padding(bottom = 10.dp)
-                .clickable(onClick = {})
-        ) {
-            Text(note.title.ifBlank { "Untitled note" }, Modifier.padding(24.dp, 22.dp, 24.dp, 12.dp), style = MaterialTheme.typography.titleMedium)
+private fun ActionSheet(note: Note, onDismiss: () -> Unit, onPin: () -> Unit, onFavorite: () -> Unit, onDelete: () -> Unit) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .36f)).clickable(onClick = onDismiss), contentAlignment = Alignment.BottomCenter) {
+        Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).navigationBarsPadding().clickable(onClick = {}).padding(bottom = 10.dp)) {
+            Box(Modifier.padding(top = 10.dp).align(Alignment.CenterHorizontally).size(width = 32.dp, height = 4.dp).background(MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp)))
+            Text(note.title.ifBlank { "Untitled note" }, Modifier.padding(24.dp, 18.dp, 24.dp, 10.dp), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             SheetAction(if (note.pinned) "Unpin note" else "Pin note", Icons.Default.PushPin, onPin)
-            SheetAction(if (note.archived) "Restore note" else "Archive note", if (note.archived) Icons.Default.Unarchive else Icons.Default.Archive, onArchive)
+            SheetAction(if (note.archived) "Remove from favorites" else "Add to favorites", if (note.archived) Icons.Default.Star else Icons.Outlined.StarBorder, onFavorite, if (note.archived) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
             val context = androidx.compose.ui.platform.LocalContext.current
             SheetAction("Share note", Icons.Default.Share, {
                 val text = listOf(note.title, note.body).filter(String::isNotBlank).joinToString("\n\n")
-                context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, text)
-                }, "Share note"))
+                context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text) }, "Share note"))
                 onDismiss()
             })
             SheetAction("Delete note", Icons.Default.DeleteOutline, onDelete, MaterialTheme.colorScheme.error)

@@ -22,8 +22,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
     val notes = _notes.asStateFlow()
-    private val _archivedNotes = MutableStateFlow<List<Note>>(emptyList())
-    val archivedNotes = _archivedNotes.asStateFlow()
+    private val _favoriteNotes = MutableStateFlow<List<Note>>(emptyList())
+    val favoriteNotes = _favoriteNotes.asStateFlow()
     private val dataMutex = Mutex()
 
     init { refresh() }
@@ -58,17 +58,17 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setPinned(note: Note, pinned: Boolean) = save(note.copy(pinned = pinned))
-    fun setArchived(note: Note, archived: Boolean) = save(note.copy(archived = archived))
+    fun setFavorite(note: Note, favorite: Boolean) = save(note.copy(archived = favorite))
 
     fun refresh() = viewModelScope.launch {
         dataMutex.withLock { refreshLocked() }
     }
 
     private suspend fun refreshLocked() {
-        val (active, archived) = withContext(Dispatchers.IO) {
-            repository.activeNotes() to repository.archivedNotes()
+        val (active, favorites) = withContext(Dispatchers.IO) {
+            repository.activeNotes() to repository.favoriteNotes()
         }
         _notes.value = active
-        _archivedNotes.value = archived
+        _favoriteNotes.value = favorites
     }
 }

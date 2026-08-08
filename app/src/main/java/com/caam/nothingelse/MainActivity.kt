@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun NothingElseApp(notesViewModel: NotesViewModel = viewModel()) {
     val notes by notesViewModel.notes.collectAsStateWithLifecycle()
-    val archived by notesViewModel.archivedNotes.collectAsStateWithLifecycle()
+    val favorites by notesViewModel.favoriteNotes.collectAsStateWithLifecycle()
     var openNote by remember { mutableStateOf<Note?>(null) }
 
     openNote?.let { note ->
@@ -47,18 +47,17 @@ private fun NothingElseApp(notesViewModel: NotesViewModel = viewModel()) {
                 openNote = editedNote.copy(pinned = !editedNote.pinned)
                 notesViewModel.setPinned(editedNote, !editedNote.pinned)
             },
-            onToggleArchived = { editedNote ->
-                notesViewModel.setArchived(editedNote, !editedNote.archived)
-                openNote = null
+            onToggleFavorite = { editedNote ->
+                notesViewModel.setFavorite(editedNote, !editedNote.archived)
             }
         )
     } ?: NotesHomeScreen(
         notes = notes,
-        archivedNotes = archived,
+        favoriteNotes = favorites,
         onOpenNote = { openNote = it },
         onCreateNote = { notesViewModel.create { openNote = it } },
         onDeleteNote = notesViewModel::delete,
         onSetPinned = notesViewModel::setPinned,
-        onSetArchived = notesViewModel::setArchived
+        onSetFavorite = notesViewModel::setFavorite
     )
 }

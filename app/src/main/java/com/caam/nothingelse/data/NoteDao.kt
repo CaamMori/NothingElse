@@ -13,7 +13,7 @@ interface NoteDao {
     fun activeNotes(): List<Note>
 
     @Query("SELECT * FROM notes WHERE archived = 1 ORDER BY updatedAt DESC")
-    fun archivedNotes(): List<Note>
+    fun favoriteNotes(): List<Note>
 
     @Query("SELECT * FROM notes WHERE id = :id")
     fun note(id: Long): Note?
