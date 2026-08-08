@@ -6,8 +6,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -90,8 +88,7 @@ fun NotesHomeScreen(
                 targetState = filter,
                 modifier = Modifier.weight(1f),
                 transitionSpec = {
-                    (fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 12 }) togetherWith
-                        (fadeOut(tween(120)) + slideOutVertically(tween(180)) { -it / 16 })
+                    fadeIn(tween(220)) togetherWith fadeOut(tween(180))
                 },
                 label = "notes-content"
             ) { selectedFilter ->
@@ -119,8 +116,7 @@ fun NotesHomeScreen(
         AnimatedContent(
             targetState = actionsFor,
             transitionSpec = {
-                (fadeIn(tween(160)) + slideInVertically(tween(200)) { it / 5 }) togetherWith
-                    (fadeOut(tween(120)) + slideOutVertically(tween(160)) { it / 5 })
+                fadeIn(tween(220)) togetherWith fadeOut(tween(180))
             },
             label = "note-actions"
         ) { note ->

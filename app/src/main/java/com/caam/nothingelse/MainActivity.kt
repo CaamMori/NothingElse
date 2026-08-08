@@ -10,8 +10,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,8 +44,7 @@ private fun NothingElseApp(notesViewModel: NotesViewModel = viewModel()) {
         targetState = openNote,
         contentKey = { it?.id ?: -1L },
         transitionSpec = {
-            (fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 12 }) togetherWith
-                (fadeOut(tween(120)) + slideOutVertically(tween(180)) { -it / 16 })
+            fadeIn(tween(220)) togetherWith fadeOut(tween(180))
         },
         label = "note-navigation"
     ) { note ->
