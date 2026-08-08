@@ -18,44 +18,47 @@ import com.caam.nothingelse.ui.theme.NothingElseTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            NothingElseTheme {
-                NothingElseApp()
-            }
-        }
+        setContent { NothingElseTheme { NothingElseApp() } }
     }
 }
 
 @Composable
 private fun NothingElseApp(notesViewModel: NotesViewModel = viewModel()) {
     val notes by notesViewModel.notes.collectAsStateWithLifecycle()
-    val archivedNotes by notesViewModel.archivedNotes.collectAsStateWithLifecycle()
+    val archived by notesViewModel.archivedNotes.collectAsStateWithLifecycle()
     var openNote by remember { mutableStateOf<Note?>(null) }
 
     openNote?.let { note ->
         EditNoteScreen(
             note = note,
-            onBack = { openNote = null },
-            onAutoSave = notesViewModel::save,
-            onDelete = {
-                notesViewModel.delete(note)
+            onBack = { editedNote ->
+                notesViewModel.save(editedNote)
                 openNote = null
             },
-            onTogglePinned = { notesViewModel.setPinned(note, !note.pinned) },
-            onToggleArchived = {
-                notesViewModel.setArchived(note, !note.archived)
+            onAutoSave = { editedNote ->
+                openNote = editedNote
+                notesViewModel.save(editedNote)
+            },
+            onDelete = { noteToDelete ->
+                notesViewModel.delete(noteToDelete)
+                openNote = null
+            },
+            onTogglePinned = { editedNote ->
+                openNote = editedNote.copy(pinned = !editedNote.pinned)
+                notesViewModel.setPinned(editedNote, !editedNote.pinned)
+            },
+            onToggleArchived = { editedNote ->
+                notesViewModel.setArchived(editedNote, !editedNote.archived)
                 openNote = null
             }
         )
     } ?: NotesHomeScreen(
         notes = notes,
-        archivedNotes = archivedNotes,
+        archivedNotes = archived,
         onOpenNote = { openNote = it },
-        onCreateNote = { notesViewModel.createNote { openNote = it } },
-        onSaveNote = notesViewModel::save,
+        onCreateNote = { notesViewModel.create { openNote = it } },
         onDeleteNote = notesViewModel::delete,
         onSetPinned = notesViewModel::setPinned,
-        onSetArchived = notesViewModel::setArchived,
-        onRefresh = notesViewModel::refresh
+        onSetArchived = notesViewModel::setArchived
     )
 }

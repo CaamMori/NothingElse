@@ -9,10 +9,11 @@ import com.caam.nothingelse.data.Note
 import com.caam.nothingelse.data.NoteRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = NoteRepository(
@@ -20,67 +21,54 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
-    val notes: StateFlow<List<Note>> = _notes.asStateFlow()
+    val notes = _notes.asStateFlow()
     private val _archivedNotes = MutableStateFlow<List<Note>>(emptyList())
-    val archivedNotes: StateFlow<List<Note>> = _archivedNotes.asStateFlow()
+    val archivedNotes = _archivedNotes.asStateFlow()
+    private val dataMutex = Mutex()
 
-    init {
-        refresh()
-    }
+    init { refresh() }
 
-    fun createNote(onCreated: (Note) -> Unit) {
-        viewModelScope.launch {
+    fun create(onCreated: (Note) -> Unit) = viewModelScope.launch {
+        val note = dataMutex.withLock {
             val created = withContext(Dispatchers.IO) {
                 val now = System.currentTimeMillis()
                 val draft = Note(id = 0, createdAt = now, updatedAt = now)
-                draft.copy(id = repository.insert(draft))
+                draft.copy(id = repository.create(draft))
             }
-            refresh()
-            onCreated(created)
+            refreshLocked()
+            created
         }
+        onCreated(note)
     }
 
-    fun save(note: Note) {
-        viewModelScope.launch {
+    fun save(note: Note) = viewModelScope.launch {
+        dataMutex.withLock {
             withContext(Dispatchers.IO) {
-                repository.update(note.copy(updatedAt = System.currentTimeMillis()))
+                repository.save(note.copy(updatedAt = System.currentTimeMillis()))
             }
-            refresh()
+            refreshLocked()
         }
     }
 
-    fun delete(note: Note) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) { repository.delete(note) }
-            refresh()
+    fun delete(note: Note) = viewModelScope.launch {
+        dataMutex.withLock {
+            withContext(Dispatchers.IO) { repository.remove(note) }
+            refreshLocked()
         }
     }
 
-    fun setPinned(note: Note, pinned: Boolean) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                repository.update(note.copy(pinned = pinned, updatedAt = System.currentTimeMillis()))
-            }
-            refresh()
-        }
+    fun setPinned(note: Note, pinned: Boolean) = save(note.copy(pinned = pinned))
+    fun setArchived(note: Note, archived: Boolean) = save(note.copy(archived = archived))
+
+    fun refresh() = viewModelScope.launch {
+        dataMutex.withLock { refreshLocked() }
     }
 
-    fun setArchived(note: Note, archived: Boolean) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                repository.update(note.copy(archived = archived, updatedAt = System.currentTimeMillis()))
-            }
-            refresh()
+    private suspend fun refreshLocked() {
+        val (active, archived) = withContext(Dispatchers.IO) {
+            repository.activeNotes() to repository.archivedNotes()
         }
-    }
-
-    fun refresh() {
-        viewModelScope.launch {
-            val (latest, archived) = withContext(Dispatchers.IO) {
-                repository.getAll() to repository.getArchived()
-            }
-            _notes.value = latest
-            _archivedNotes.value = archived
-        }
+        _notes.value = active
+        _archivedNotes.value = archived
     }
 }

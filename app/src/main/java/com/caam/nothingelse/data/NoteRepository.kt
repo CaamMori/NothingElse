@@ -1,10 +1,9 @@
 package com.caam.nothingelse.data
 
-class NoteRepository(private val dao: NoteDao) {
-    fun getAll() = dao.getAll()
-    fun getArchived() = dao.getArchived()
-    fun get(id: Long) = dao.get(id)
-    fun insert(note: Note) = dao.insert(note)
-    fun update(note: Note) = dao.update(note)
-    fun delete(note: Note) = dao.delete(note)
+class NoteRepository(private val notes: NoteDao) {
+    fun activeNotes() = notes.activeNotes()
+    fun archivedNotes() = notes.archivedNotes()
+    fun create(note: Note) = notes.insert(note)
+    fun save(note: Note) = notes.update(note)
+    fun remove(note: Note) = notes.delete(note)
 }
