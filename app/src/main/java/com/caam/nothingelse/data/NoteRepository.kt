@@ -6,4 +6,5 @@ class NoteRepository(private val notes: NoteDao) {
     fun create(note: Note) = notes.insert(note)
     fun save(note: Note) = notes.update(note)
     fun remove(note: Note) = notes.delete(note)
+    fun removeAll(ids: List<Long>) = notes.deleteByIds(ids)
 }

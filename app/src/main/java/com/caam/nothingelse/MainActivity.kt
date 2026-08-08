@@ -89,6 +89,8 @@ private fun NothingElseApp(notesViewModel: NotesViewModel = viewModel()) {
                 }
             },
             onDeleteNote = notesViewModel::delete,
+            onDeleteNotes = notesViewModel::deleteNotes,
+            onReorderNotes = notesViewModel::reorder,
             onSetPinned = notesViewModel::setPinned,
             onSetFavorite = notesViewModel::setFavorite
         )

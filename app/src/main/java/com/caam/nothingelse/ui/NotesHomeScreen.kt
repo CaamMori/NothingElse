@@ -9,7 +9,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +33,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
@@ -43,15 +49,21 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -70,22 +82,59 @@ private enum class NoteFilter { Notes, Favorites }
 fun NotesHomeScreen(
     notes: List<Note>, favoriteNotes: List<Note>, onOpenNote: (Note) -> Unit,
     onCreateNote: () -> Unit, onDeleteNote: (Note) -> Unit,
+    onDeleteNotes: (List<Note>) -> Unit,
+    onReorderNotes: (List<Note>, Int, Int) -> Unit,
     onSetPinned: (Note, Boolean) -> Unit, onSetFavorite: (Note, Boolean) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf(NoteFilter.Notes) }
     var actionsFor by remember { mutableStateOf<Note?>(null) }
+    var selectedIds by remember { mutableStateOf(emptySet<Long>()) }
+    var confirmingDelete by remember { mutableStateOf(false) }
     val source = if (filter == NoteFilter.Favorites) favoriteNotes else notes
-    BackHandler(enabled = actionsFor != null) { actionsFor = null }
+    val visible = source.filter { it.title.contains(query, true) || it.body.contains(query, true) }
+    val selectionMode = selectedIds.isNotEmpty()
+    LaunchedEffect(visible.map(Note::id)) {
+        selectedIds = selectedIds.intersect(visible.mapTo(mutableSetOf(), Note::id))
+        if (selectedIds.isEmpty()) confirmingDelete = false
+    }
+    BackHandler(enabled = confirmingDelete || selectionMode || actionsFor != null) {
+        when {
+            confirmingDelete -> confirmingDelete = false
+            selectionMode -> selectedIds = emptySet()
+            else -> actionsFor = null
+        }
+    }
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(Modifier.fillMaxSize().navigationBarsPadding()) {
-            HomeHeader(
-                filter = filter,
-                noteCount = source.size,
-                onFilterChange = { filter = it },
-                onCreateNote = onCreateNote
-            )
-            InlineSearch(query, { query = it })
+            if (selectionMode) {
+                SelectionHeader(
+                    selectedCount = selectedIds.size,
+                    allSelected = visible.isNotEmpty() && selectedIds == visible.mapTo(mutableSetOf(), Note::id),
+                    confirmingDelete = confirmingDelete,
+                    onExit = { selectedIds = emptySet(); confirmingDelete = false },
+                    onSelectAll = {
+                        val visibleIds = visible.mapTo(mutableSetOf(), Note::id)
+                        selectedIds = if (selectedIds == visibleIds) emptySet()
+                            else visibleIds
+                    },
+                    onRequestDelete = { confirmingDelete = true },
+                    onCancelDelete = { confirmingDelete = false },
+                    onConfirmDelete = {
+                        onDeleteNotes(visible.filter { it.id in selectedIds })
+                        selectedIds = emptySet()
+                        confirmingDelete = false
+                    }
+                )
+            } else {
+                HomeHeader(
+                    filter = filter,
+                    noteCount = source.size,
+                    onFilterChange = { filter = it },
+                    onCreateNote = onCreateNote
+                )
+                InlineSearch(query, { query = it })
+            }
             AnimatedContent(
                 targetState = filter,
                 modifier = Modifier.weight(1f),
@@ -101,19 +150,19 @@ fun NotesHomeScreen(
                 if (selectedVisible.isEmpty()) {
                     EmptyState(query.isNotBlank(), selectedFilter, Modifier.fillMaxSize())
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 24.dp)
-                    ) {
-                        items(selectedVisible, key = { it.id }) { note ->
-                            NoteRow(
-                                note,
-                                query,
-                                { onOpenNote(note) },
-                                { actionsFor = note }
-                            )
-                        }
-                    }
+                    ReorderableNotesList(
+                        notes = selectedVisible,
+                        query = query,
+                        selectedIds = selectedIds,
+                        selectionMode = selectionMode,
+                        onOpen = onOpenNote,
+                        onLongPress = { selectedIds = selectedIds + it.id },
+                        onToggleSelection = { note ->
+                            selectedIds = if (note.id in selectedIds) selectedIds - note.id else selectedIds + note.id
+                        },
+                        onActions = { actionsFor = it },
+                        onReorder = onReorderNotes
+                    )
                 }
             }
         }
@@ -137,6 +186,46 @@ fun NotesHomeScreen(
             }
         }
     }
+}
+
+@Composable
+private fun SelectionHeader(
+    selectedCount: Int,
+    allSelected: Boolean,
+    confirmingDelete: Boolean,
+    onExit: () -> Unit,
+    onSelectAll: () -> Unit,
+    onRequestDelete: () -> Unit,
+    onCancelDelete: () -> Unit,
+    onConfirmDelete: () -> Unit
+) {
+    Row(
+        Modifier.fillMaxWidth().statusBarsPadding().height(82.dp).padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onExit) { Icon(Icons.Default.Close, "Exit selection") }
+        if (confirmingDelete) {
+            Text("Delete $selectedCount ${if (selectedCount == 1) "note" else "notes"}?", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            TextButton("Cancel", onCancelDelete)
+            TextButton("Delete", onConfirmDelete, MaterialTheme.colorScheme.error)
+        } else {
+            Text("$selectedCount selected", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            TextButton(if (allSelected) "Clear" else "Select all", onSelectAll)
+            IconButton(onClick = onRequestDelete) {
+                Icon(Icons.Default.DeleteOutline, "Delete selected", tint = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TextButton(label: String, onClick: () -> Unit, color: Color = MaterialTheme.colorScheme.primary) {
+    Text(
+        label,
+        Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 9.dp),
+        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+        color = color
+    )
 }
 
 @Composable
@@ -212,20 +301,152 @@ private fun InlineSearch(query: String, onQueryChange: (String) -> Unit) {
 }
 
 @Composable
-private fun NoteRow(note: Note, query: String, onOpen: () -> Unit, onActions: () -> Unit, modifier: Modifier = Modifier) {
+private fun ReorderableNotesList(
+    notes: List<Note>,
+    query: String,
+    selectedIds: Set<Long>,
+    selectionMode: Boolean,
+    onOpen: (Note) -> Unit,
+    onLongPress: (Note) -> Unit,
+    onToggleSelection: (Note) -> Unit,
+    onActions: (Note) -> Unit,
+    onReorder: (List<Note>, Int, Int) -> Unit
+) {
+    var displayedNotes by remember { mutableStateOf(notes) }
+    var draggedId by remember { mutableStateOf<Long?>(null) }
+    var dragY by remember { mutableStateOf(0f) }
+    var dragStartIndex by remember { mutableStateOf(-1) }
+    var dragSourceNotes by remember { mutableStateOf(emptyList<Note>()) }
+    val rowCenters = remember { mutableStateMapOf<Long, Float>() }
+
+    LaunchedEffect(notes) {
+        if (draggedId == null) displayedNotes = notes
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 24.dp)
+    ) {
+        items(displayedNotes, key = { it.id }) { note ->
+            NoteRow(
+                note = note,
+                query = query,
+                selected = note.id in selectedIds,
+                selectionMode = selectionMode,
+                onOpen = { if (selectionMode) onToggleSelection(note) else onOpen(note) },
+                onLongPress = { if (!selectionMode) onLongPress(note) else onToggleSelection(note) },
+                onActions = { onActions(note) },
+                onPositioned = { rowCenters[note.id] = it },
+                onDragStart = {
+                    draggedId = note.id
+                    dragY = rowCenters[note.id] ?: 0f
+                    dragStartIndex = displayedNotes.indexOfFirst { it.id == note.id }
+                    dragSourceNotes = displayedNotes
+                },
+                onDrag = { delta ->
+                    dragY += delta
+                    val currentIndex = displayedNotes.indexOfFirst { it.id == note.id }
+                    val targetIndex = displayedNotes.indices.filter {
+                        displayedNotes[it].pinned == note.pinned
+                    }.minByOrNull { index ->
+                        kotlin.math.abs((rowCenters[displayedNotes[index].id] ?: dragY) - dragY)
+                    } ?: currentIndex
+                    if (currentIndex >= 0 && targetIndex != currentIndex) {
+                        displayedNotes = displayedNotes.toMutableList().apply {
+                            add(targetIndex, removeAt(currentIndex))
+                        }
+                    }
+                },
+                onDragEnd = {
+                    val endIndex = displayedNotes.indexOfFirst { it.id == note.id }
+                    if (dragStartIndex >= 0 && endIndex >= 0 && dragStartIndex != endIndex) {
+                        onReorder(dragSourceNotes, dragStartIndex, endIndex)
+                    }
+                    draggedId = null
+                    dragStartIndex = -1
+                    dragSourceNotes = emptyList()
+                    displayedNotes = notes
+                },
+                onDragCancel = {
+                    draggedId = null
+                    dragStartIndex = -1
+                    dragSourceNotes = emptyList()
+                    displayedNotes = notes
+                }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun NoteRow(
+    note: Note,
+    query: String,
+    selected: Boolean,
+    selectionMode: Boolean,
+    onOpen: () -> Unit,
+    onLongPress: () -> Unit,
+    onActions: () -> Unit,
+    onPositioned: (Float) -> Unit,
+    onDragStart: () -> Unit,
+    onDrag: (Float) -> Unit,
+    onDragEnd: () -> Unit,
+    onDragCancel: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val currentOnDragStart = rememberUpdatedState(onDragStart)
+    val currentOnDrag = rememberUpdatedState(onDrag)
+    val currentOnDragEnd = rememberUpdatedState(onDragEnd)
+    val currentOnDragCancel = rememberUpdatedState(onDragCancel)
     Row(
-        modifier.fillMaxWidth().clickable(onClick = onOpen).padding(start = 24.dp, end = 12.dp, top = 14.dp, bottom = 14.dp),
+        modifier.fillMaxWidth()
+            .background(if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+            .onGloballyPositioned { coordinates ->
+                onPositioned(coordinates.positionInRoot().y + coordinates.size.height / 2f)
+            }
+            .padding(start = 24.dp, end = 12.dp),
         verticalAlignment = Alignment.Top
     ) {
-        Column(Modifier.weight(1f)) {
+        Column(
+            Modifier.weight(1f).combinedClickable(onClick = onOpen, onLongClick = onLongPress)
+                .padding(top = 14.dp, bottom = 14.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (selected) {
+                    Icon(Icons.Default.Check, "Selected", Modifier.size(15.dp), tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(7.dp))
+                }
                 if (note.pinned) { Icon(Icons.Default.PushPin, "Pinned", Modifier.size(13.dp), tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.width(6.dp)) }
                 Text(highlight(note.title.ifBlank { "Untitled note" }, query), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (note.body.isNotBlank()) Text(highlight(note.body, query), Modifier.padding(top = 3.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(relativeDate(note.updatedAt), Modifier.padding(top = 7.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        IconButton(onClick = onActions) { Icon(Icons.Default.MoreHoriz, "Note actions", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+        if (!selectionMode) {
+            IconButton(onClick = onActions, Modifier.padding(top = 2.dp)) {
+                Icon(Icons.Default.MoreHoriz, "Note actions", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (!selectionMode) {
+            Box(
+                Modifier.size(width = 44.dp, height = 64.dp)
+                    .pointerInput(note.id) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { currentOnDragStart.value() },
+                            onDragEnd = { currentOnDragEnd.value() },
+                            onDragCancel = { currentOnDragCancel.value() },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                currentOnDrag.value(dragAmount.y)
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.DragHandle, "Reorder note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
 }
 
