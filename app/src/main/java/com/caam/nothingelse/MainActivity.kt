@@ -7,8 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.SystemBarStyle
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,7 +44,8 @@ private fun NothingElseApp(notesViewModel: NotesViewModel = viewModel()) {
         targetState = openNote,
         contentKey = { it?.id ?: -1L },
         transitionSpec = {
-            EnterTransition.None togetherWith ExitTransition.None
+            fadeIn(animationSpec = tween(220), initialAlpha = 0.92f) togetherWith
+                fadeOut(animationSpec = tween(180), targetAlpha = 0.92f)
         },
         label = "note-navigation"
     ) { note ->
@@ -54,10 +56,6 @@ private fun NothingElseApp(notesViewModel: NotesViewModel = viewModel()) {
                     notesViewModel.save(editedNote) { openNote = null }
                 },
                 onExit = { openNote = null },
-                onAutoSave = { editedNote ->
-                    openNote = editedNote
-                    notesViewModel.save(editedNote)
-                },
                 onDelete = { noteToDelete ->
                     notesViewModel.delete(noteToDelete)
                     openNote = null

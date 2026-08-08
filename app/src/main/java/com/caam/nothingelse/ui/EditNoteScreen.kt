@@ -51,14 +51,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.caam.nothingelse.data.Note
-import kotlinx.coroutines.delay
 
 @Composable
 fun EditNoteScreen(
     note: Note,
     onSaveAndExit: (Note) -> Unit,
     onExit: () -> Unit,
-    onAutoSave: (Note) -> Unit,
     onDelete: (Note) -> Unit,
     onTogglePinned: (Note) -> Unit,
     onToggleFavorite: (Note) -> Unit
@@ -80,12 +78,6 @@ fun EditNoteScreen(
     }
 
     LaunchedEffect(note.id) { focusRequester.requestFocus() }
-    LaunchedEffect(title, body, isSaving) {
-        if (!isSaving && (title != note.title || body != note.body)) {
-            delay(400)
-            if (!isSaving) onAutoSave(editedNote())
-        }
-    }
     BackHandler { requestExit() }
     if (showExitDialog) {
         AlertDialog(
@@ -127,7 +119,7 @@ fun EditNoteScreen(
                         }
                     }
                 ) { Text("Save") }
-                IconButton(onClick = { onTogglePinned(editedNote()) }) {
+                IconButton(onClick = { onTogglePinned(note) }) {
                     Icon(Icons.Default.PushPin, if (note.pinned) "Unpin note" else "Pin note", tint = if (note.pinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 IconButton(onClick = {
@@ -136,7 +128,7 @@ fun EditNoteScreen(
                 }) {
                     Icon(Icons.Default.Share, "Share note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = { onToggleFavorite(editedNote()) }) {
+                IconButton(onClick = { onToggleFavorite(note) }) {
                     AnimatedContent(
                         targetState = note.archived,
                         transitionSpec = { fadeIn(tween(150)) togetherWith fadeOut(tween(100)) },
