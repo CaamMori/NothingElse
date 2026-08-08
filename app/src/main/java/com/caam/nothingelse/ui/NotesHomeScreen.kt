@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.animateItemPlacement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -110,8 +109,7 @@ fun NotesHomeScreen(
                                 note,
                                 query,
                                 { onOpenNote(note) },
-                                { actionsFor = note },
-                                Modifier.animateItemPlacement(tween(180))
+                                { actionsFor = note }
                             )
                         }
                     }
