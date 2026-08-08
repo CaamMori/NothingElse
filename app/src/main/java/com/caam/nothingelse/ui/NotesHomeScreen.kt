@@ -3,9 +3,10 @@ package com.caam.nothingelse.ui
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -89,8 +90,9 @@ fun NotesHomeScreen(
                 targetState = filter,
                 modifier = Modifier.weight(1f),
                 transitionSpec = {
-                    fadeIn(animationSpec = tween(220), initialAlpha = 0.92f) togetherWith
-                        fadeOut(animationSpec = tween(180), targetAlpha = 0.92f)
+                    (fadeIn(animationSpec = tween(240), initialAlpha = 0.35f) +
+                        scaleIn(animationSpec = tween(240), initialScale = 0.985f)) togetherWith
+                        ExitTransition.None
                 },
                 label = "notes-content"
             ) { selectedFilter ->
@@ -118,8 +120,9 @@ fun NotesHomeScreen(
         AnimatedContent(
             targetState = actionsFor,
             transitionSpec = {
-                fadeIn(animationSpec = tween(220), initialAlpha = 0.92f) togetherWith
-                    fadeOut(animationSpec = tween(180), targetAlpha = 0.92f)
+                (fadeIn(animationSpec = tween(240), initialAlpha = 0.35f) +
+                    scaleIn(animationSpec = tween(240), initialScale = 0.985f)) togetherWith
+                    ExitTransition.None
             },
             label = "note-actions"
         ) { note ->
