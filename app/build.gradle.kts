@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application") version "8.3.2"
     id("org.jetbrains.kotlin.android") version "1.9.22"
+    kotlin("kapt") version "1.9.22"
 }
 
 android {
@@ -66,4 +67,14 @@ dependencies {
     implementation("androidx.compose.ui:ui:1.6.0")
     implementation("androidx.compose.material3:material3:1.1.0")
     implementation("com.google.android.material:material:1.10.0")
+    // Jetpack Compose and Room for notes app
+    implementation("androidx.compose.ui:ui-tooling-preview:1.6.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
+    implementation("androidx.room:room-runtime:2.5.2")
+    kapt("androidx.room:room-compiler:2.5.2")
+    implementation("androidx.room:room-ktx:2.5.2")
+
+    // Testing helpers
+    testImplementation("junit:junit:4.13.2")
 }
