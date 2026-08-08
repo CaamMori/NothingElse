@@ -18,6 +18,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = NoteRepository(
         Room.databaseBuilder(application, AppDatabase::class.java, "nothingelse-db").build().noteDao()
     )
+
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
     val notes: StateFlow<List<Note>> = _notes.asStateFlow()
     private val _archivedNotes = MutableStateFlow<List<Note>>(emptyList())
@@ -27,12 +28,22 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         refresh()
     }
 
+    fun createNote(onCreated: (Note) -> Unit) {
+        viewModelScope.launch {
+            val created = withContext(Dispatchers.IO) {
+                val now = System.currentTimeMillis()
+                val draft = Note(id = 0, createdAt = now, updatedAt = now)
+                draft.copy(id = repository.insert(draft))
+            }
+            refresh()
+            onCreated(created)
+        }
+    }
+
     fun save(note: Note) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val now = System.currentTimeMillis()
-                if (note.id == 0L) repository.insert(note.copy(createdAt = now, updatedAt = now))
-                else repository.update(note.copy(updatedAt = now))
+                repository.update(note.copy(updatedAt = System.currentTimeMillis()))
             }
             refresh()
         }
@@ -63,7 +74,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun refresh() {
+    fun refresh() {
         viewModelScope.launch {
             val (latest, archived) = withContext(Dispatchers.IO) {
                 repository.getAll() to repository.getArchived()

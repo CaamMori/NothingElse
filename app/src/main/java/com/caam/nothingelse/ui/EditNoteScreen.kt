@@ -1,77 +1,152 @@
 package com.caam.nothingelse.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.caam.nothingelse.data.Note
+import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditNoteScreen(note: Note, onBack: () -> Unit, onSave: (Note) -> Unit, onDelete: () -> Unit) {
+fun EditNoteScreen(
+    note: Note,
+    onBack: () -> Unit,
+    onAutoSave: (Note) -> Unit,
+    onDelete: () -> Unit,
+    onTogglePinned: () -> Unit,
+    onToggleArchived: () -> Unit
+) {
     var title by remember(note.id) { mutableStateOf(note.title) }
     var body by remember(note.id) { mutableStateOf(note.body) }
+    var menuExpanded by remember { mutableStateOf(false) }
+    val titleFocus = remember { FocusRequester() }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(if (note.id == 0L) "New note" else "Edit note") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    if (note.id != 0L) {
-                        IconButton(onClick = onDelete) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete note")
-                        }
-                    }
-                    TextButton(
-                        enabled = note.id != 0L || title.isNotBlank() || body.isNotBlank(),
-                        onClick = { onSave(note.copy(title = title.trim(), body = body.trim())) }
-                    ) { Text("Save") }
-                }
-            )
+    LaunchedEffect(note.id) { titleFocus.requestFocus() }
+    LaunchedEffect(title, body) {
+        if (title != note.title || body != note.body) {
+            delay(400)
+            onAutoSave(note.copy(title = title, body = body))
         }
-    ) { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Title") },
-                singleLine = true
-            )
-            OutlinedTextField(
-                value = body,
-                onValueChange = { body = it },
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                label = { Text("Note") },
-                placeholder = { Text("Write something...") }
-            )
+    }
+
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        EditorNavigation(
+            pinned = note.pinned,
+            archived = note.archived,
+            expanded = menuExpanded,
+            onBack = onBack,
+            onMore = { menuExpanded = true },
+            onDismiss = { menuExpanded = false },
+            onPin = { menuExpanded = false; onTogglePinned() },
+            onArchive = { menuExpanded = false; onToggleArchived(); onBack() },
+            onDelete = { menuExpanded = false; onDelete() }
+        )
+        TextField(
+            value = title,
+            onValueChange = { title = it },
+            modifier = Modifier.fillMaxWidth().focusRequester(titleFocus).padding(horizontal = 24.dp),
+            placeholder = { Text("Title") },
+            textStyle = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+            colors = editorTextFieldColors(),
+            singleLine = false
+        )
+        Spacer(Modifier.height(6.dp))
+        TextField(
+            value = body,
+            onValueChange = { body = it },
+            modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp),
+            placeholder = { Text("Start writing…") },
+            textStyle = MaterialTheme.typography.bodyLarge,
+            colors = editorTextFieldColors()
+        )
+    }
+}
+
+@Composable
+private fun EditorNavigation(
+    pinned: Boolean,
+    archived: Boolean,
+    expanded: Boolean,
+    onBack: () -> Unit,
+    onMore: () -> Unit,
+    onDismiss: () -> Unit,
+    onPin: () -> Unit,
+    onArchive: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
+        }
+        Box {
+            IconButton(onClick = onMore) {
+                Icon(Icons.Default.MoreHoriz, contentDescription = "More actions", tint = MaterialTheme.colorScheme.primary)
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+                DropdownMenuItem(
+                    text = { Text(if (pinned) "Unpin" else "Pin") },
+                    leadingIcon = { Icon(Icons.Default.PushPin, null) },
+                    onClick = onPin
+                )
+                DropdownMenuItem(
+                    text = { Text(if (archived) "Restore" else "Archive") },
+                    leadingIcon = { Icon(if (archived) Icons.Default.Unarchive else Icons.Default.Archive, null) },
+                    onClick = onArchive
+                )
+                DropdownMenuItem(
+                    text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                    leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                    onClick = onDelete
+                )
+            }
         }
     }
 }
+
+@Composable
+private fun editorTextFieldColors() = TextFieldDefaults.colors(
+    focusedContainerColor = Color.Transparent,
+    unfocusedContainerColor = Color.Transparent,
+    disabledContainerColor = Color.Transparent,
+    focusedIndicatorColor = Color.Transparent,
+    unfocusedIndicatorColor = Color.Transparent,
+    cursorColor = MaterialTheme.colorScheme.primary
+)
