@@ -26,12 +26,15 @@ class MainActivity : ComponentActivity() {
                     Column {
                         TopAppBar(title = { Text("NothingElse") })
                         Button(onClick = {
-                            val id = dao.insert(Note(title = "New note", body = ""))
+                            val id = dao.insert(Note(id = 0, title = "New note", body = ""))
                             notes.value = dao.getAll()
                         }) { Text("New") }
                         LazyColumn {
                             items(notes.value) { n ->
-                                ListItem(headlineText = { Text(n.title.ifEmpty { "(no title)" }) }, supportingText = { Text(n.body.take(80)) })
+                                androidx.compose.material3.ListItem(
+                                    headlineContent = { Text(n.title.ifEmpty { "(no title)" }) },
+                                    supportingContent = { Text(n.body.take(80)) }
+                                )
                             }
                         }
                     }
