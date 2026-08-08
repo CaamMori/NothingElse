@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +38,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -221,7 +222,7 @@ private fun ActionSheet(note: Note, onDismiss: () -> Unit, onPin: () -> Unit, on
         Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).navigationBarsPadding().clickable(onClick = {}).padding(bottom = 10.dp)) {
             Box(Modifier.padding(top = 10.dp).align(Alignment.CenterHorizontally).size(width = 32.dp, height = 4.dp).background(MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp)))
             Text(note.title.ifBlank { "Untitled note" }, Modifier.padding(24.dp, 18.dp, 24.dp, 10.dp), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Divider(color = MaterialTheme.colorScheme.outlineVariant)
             SheetAction(if (note.pinned) "Unpin note" else "Pin note", Icons.Default.PushPin, onPin)
             SheetAction(if (note.archived) "Remove from favorites" else "Add to favorites", if (note.archived) Icons.Default.Star else Icons.Outlined.StarBorder, onFavorite, if (note.archived) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
             val context = androidx.compose.ui.platform.LocalContext.current
