@@ -11,38 +11,38 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-private val AppleBlue = Color(0xFF007AFF)
-private val AppleSecondaryLight = Color(0xFF8E8E93)
-private val AppleSecondaryDark = Color(0xFF98989D)
+private val Accent = Color(0xFF007AFF)
+private val SecondaryLight = Color(0xFF8E8E93)
+private val SecondaryDark = Color(0xFF98989D)
 
 private val LightColors = lightColorScheme(
-    primary = AppleBlue,
+    primary = Accent,
     onPrimary = Color.White,
     background = Color(0xFFF2F2F7),
     onBackground = Color(0xFF000000),
     surface = Color(0xFFF2F2F7),
     onSurface = Color(0xFF000000),
     surfaceVariant = Color(0xFFE5E5EA),
-    onSurfaceVariant = AppleSecondaryLight,
+    onSurfaceVariant = SecondaryLight,
     outlineVariant = Color(0xFFC6C6C8),
     error = Color(0xFFFF3B30)
 )
 
 private val DarkColors = darkColorScheme(
-    primary = AppleBlue,
+    primary = Accent,
     onPrimary = Color.White,
     background = Color(0xFF000000),
     onBackground = Color(0xFFFFFFFF),
     surface = Color(0xFF000000),
     onSurface = Color(0xFFFFFFFF),
     surfaceVariant = Color(0xFF1C1C1E),
-    onSurfaceVariant = AppleSecondaryDark,
+    onSurfaceVariant = SecondaryDark,
     outlineVariant = Color(0xFF38383A),
     error = Color(0xFFFF453A)
 )
 
 private val NothingElseTypography = Typography(
-    displaySmall = TextStyle(fontSize = 34.sp, lineHeight = 41.sp, fontWeight = FontWeight.Bold),
+    displaySmall = TextStyle(fontSize = 34.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold),
     headlineMedium = TextStyle(fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold),
     titleLarge = TextStyle(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold),
     titleMedium = TextStyle(fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold),

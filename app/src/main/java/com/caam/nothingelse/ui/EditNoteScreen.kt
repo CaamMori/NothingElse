@@ -2,17 +2,13 @@ package com.caam.nothingelse.ui
 
 import android.content.Intent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.weight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Archive
@@ -40,7 +36,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.caam.nothingelse.data.Note
 import kotlinx.coroutines.delay
@@ -56,116 +51,102 @@ fun EditNoteScreen(
 ) {
     var title by remember(note.id) { mutableStateOf(note.title) }
     var body by remember(note.id) { mutableStateOf(note.body) }
-    var menuExpanded by remember { mutableStateOf(false) }
+    var actionsOpen by remember { mutableStateOf(false) }
     val titleFocus = remember { FocusRequester() }
     val context = LocalContext.current
 
     LaunchedEffect(note.id) { titleFocus.requestFocus() }
     LaunchedEffect(title, body) {
         if (title != note.title || body != note.body) {
-            delay(400)
+            delay(350)
             onAutoSave(note.copy(title = title, body = body))
         }
     }
 
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        EditorNavigation(
-            pinned = note.pinned,
-            archived = note.archived,
-            expanded = menuExpanded,
-            onBack = onBack,
-            onMore = { menuExpanded = true },
-            onDismiss = { menuExpanded = false },
-            onPin = { menuExpanded = false; onTogglePinned() },
-            onArchive = { menuExpanded = false; onToggleArchived(); onBack() },
-            onShare = {
-                menuExpanded = false
-                val content = listOf(title, body).filter { it.isNotBlank() }.joinToString("\n\n")
-                context.startActivity(
-                    Intent.createChooser(
-                        Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, content)
-                        },
-                        "Share note"
-                    )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 14.dp),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back to notes",
+                    tint = MaterialTheme.colorScheme.primary
                 )
-            },
-            onDelete = { menuExpanded = false; onDelete() }
-        )
+            }
+            Box {
+                IconButton(onClick = { actionsOpen = true }) {
+                    Icon(
+                        Icons.Default.MoreHoriz,
+                        contentDescription = "Note actions",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                DropdownMenu(expanded = actionsOpen, onDismissRequest = { actionsOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(if (note.pinned) "Unpin" else "Pin") },
+                        leadingIcon = { Icon(Icons.Default.PushPin, contentDescription = null) },
+                        onClick = { actionsOpen = false; onTogglePinned() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (note.archived) "Restore" else "Archive") },
+                        leadingIcon = { Icon(if (note.archived) Icons.Default.Unarchive else Icons.Default.Archive, contentDescription = null) },
+                        onClick = { actionsOpen = false; onToggleArchived() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Share") },
+                        leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
+                        onClick = {
+                            actionsOpen = false
+                            val text = listOf(title, body).filter(String::isNotBlank).joinToString("\n\n")
+                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, text)
+                            }, "Share note"))
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                        onClick = { actionsOpen = false; onDelete() }
+                    )
+                }
+            }
+        }
         TextField(
             value = title,
             onValueChange = { title = it },
-            modifier = Modifier.fillMaxWidth().focusRequester(titleFocus).padding(horizontal = 24.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(titleFocus)
+                .padding(horizontal = 24.dp),
             placeholder = { Text("Title") },
-            textStyle = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            colors = editorTextFieldColors(),
-            singleLine = false
+            textStyle = MaterialTheme.typography.headlineMedium,
+            colors = editorFieldColors()
         )
-        Spacer(Modifier.height(6.dp))
         TextField(
             value = body,
             onValueChange = { body = it },
-            modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp),
-            placeholder = { Text("Start writing…") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            placeholder = { Text("Start writing") },
             textStyle = MaterialTheme.typography.bodyLarge,
-            colors = editorTextFieldColors()
+            colors = editorFieldColors()
         )
     }
 }
 
 @Composable
-private fun EditorNavigation(
-    pinned: Boolean,
-    archived: Boolean,
-    expanded: Boolean,
-    onBack: () -> Unit,
-    onMore: () -> Unit,
-    onDismiss: () -> Unit,
-    onPin: () -> Unit,
-    onArchive: () -> Unit,
-    onShare: () -> Unit,
-    onDelete: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
-        }
-        Box {
-            IconButton(onClick = onMore) {
-                Icon(Icons.Default.MoreHoriz, contentDescription = "More actions", tint = MaterialTheme.colorScheme.primary)
-            }
-            DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-                DropdownMenuItem(
-                    text = { Text(if (pinned) "Unpin" else "Pin") },
-                    leadingIcon = { Icon(Icons.Default.PushPin, null) },
-                    onClick = onPin
-                )
-                DropdownMenuItem(
-                    text = { Text(if (archived) "Restore" else "Archive") },
-                    leadingIcon = { Icon(if (archived) Icons.Default.Unarchive else Icons.Default.Archive, null) },
-                    onClick = onArchive
-                )
-                DropdownMenuItem(
-                    text = { Text("Share") },
-                    leadingIcon = { Icon(Icons.Default.Share, null) },
-                    onClick = onShare
-                )
-                DropdownMenuItem(
-                    text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
-                    leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                    onClick = onDelete
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun editorTextFieldColors() = TextFieldDefaults.colors(
+private fun editorFieldColors() = TextFieldDefaults.colors(
     focusedContainerColor = Color.Transparent,
     unfocusedContainerColor = Color.Transparent,
     disabledContainerColor = Color.Transparent,
