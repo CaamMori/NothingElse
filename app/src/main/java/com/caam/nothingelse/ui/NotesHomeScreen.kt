@@ -3,9 +3,8 @@ package com.caam.nothingelse.ui
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -50,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -88,7 +88,7 @@ fun NotesHomeScreen(
                 targetState = filter,
                 modifier = Modifier.weight(1f),
                 transitionSpec = {
-                    fadeIn(tween(220)) togetherWith fadeOut(tween(180))
+                    EnterTransition.None togetherWith ExitTransition.None
                 },
                 label = "notes-content"
             ) { selectedFilter ->
@@ -199,6 +199,7 @@ private fun InlineSearch(query: String, onQueryChange: (String) -> Unit) {
             singleLine = true,
             modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Search notes" },
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
             decorationBox = { field -> Box { if (query.isEmpty()) Text("Search notes", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant); field() } }
         )
     }

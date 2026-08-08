@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Divider
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -34,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,7 +56,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun EditNoteScreen(
     note: Note,
-    onBack: (Note) -> Unit,
+    onSaveAndExit: (Note) -> Unit,
+    onExit: () -> Unit,
     onAutoSave: (Note) -> Unit,
     onDelete: (Note) -> Unit,
     onTogglePinned: (Note) -> Unit,
@@ -62,6 +65,8 @@ fun EditNoteScreen(
 ) {
     var title by remember(note.id) { mutableStateOf(note.title) }
     var body by remember(note.id) { mutableStateOf(note.body) }
+    var showExitDialog by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val context = LocalContext.current
     val favoriteTint by animateColorAsState(
@@ -70,24 +75,58 @@ fun EditNoteScreen(
     )
 
     fun editedNote() = note.copy(title = title, body = body)
+    fun requestExit() {
+        if (title != note.title || body != note.body) showExitDialog = true else onExit()
+    }
 
     LaunchedEffect(note.id) { focusRequester.requestFocus() }
-    LaunchedEffect(title, body) {
-        if (title != note.title || body != note.body) {
+    LaunchedEffect(title, body, isSaving) {
+        if (!isSaving && (title != note.title || body != note.body)) {
             delay(400)
-            onAutoSave(editedNote())
+            if (!isSaving) onAutoSave(editedNote())
         }
     }
-    BackHandler { onBack(editedNote()) }
+    BackHandler { requestExit() }
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text("Save changes?") },
+            text = { Text("Your changes have not been saved yet.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (!isSaving) {
+                        isSaving = true
+                        showExitDialog = false
+                        onSaveAndExit(editedNote())
+                    }
+                }) { Text("Save") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { showExitDialog = false; onExit() }) { Text("Discard") }
+                    TextButton(onClick = { showExitDialog = false }) { Text("Cancel") }
+                }
+            }
+        )
+    }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).navigationBarsPadding()) {
         Row(
             Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 10.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            IconButton(onClick = { onBack(editedNote()) }) {
+            IconButton(onClick = ::requestExit) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to notes", tint = MaterialTheme.colorScheme.primary)
             }
             Row {
+                TextButton(
+                    enabled = !isSaving,
+                    onClick = {
+                        if (!isSaving) {
+                            isSaving = true
+                            onSaveAndExit(editedNote())
+                        }
+                    }
+                ) { Text("Save") }
                 IconButton(onClick = { onTogglePinned(editedNote()) }) {
                     Icon(Icons.Default.PushPin, if (note.pinned) "Unpin note" else "Pin note", tint = if (note.pinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                 }

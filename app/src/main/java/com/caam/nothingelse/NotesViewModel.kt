@@ -41,13 +41,14 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         onCreated(note)
     }
 
-    fun save(note: Note) = viewModelScope.launch {
+    fun save(note: Note, onSaved: (() -> Unit)? = null) = viewModelScope.launch {
         dataMutex.withLock {
             withContext(Dispatchers.IO) {
                 repository.save(note.copy(updatedAt = System.currentTimeMillis()))
             }
             refreshLocked()
         }
+        onSaved?.invoke()
     }
 
     fun delete(note: Note) = viewModelScope.launch {
