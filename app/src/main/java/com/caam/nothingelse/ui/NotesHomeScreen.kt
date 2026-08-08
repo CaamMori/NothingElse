@@ -116,7 +116,7 @@ fun NotesHomeScreen(
         AnimatedContent(
             targetState = actionsFor,
             transitionSpec = {
-                fadeIn(tween(220)) togetherWith fadeOut(tween(180))
+                EnterTransition.None togetherWith ExitTransition.None
             },
             label = "note-actions"
         ) { note ->
