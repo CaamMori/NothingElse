@@ -1,8 +1,18 @@
 package com.caam.nothingelse
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.SystemBarStyle
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +28,10 @@ import com.caam.nothingelse.ui.theme.NothingElseTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
+        )
         setContent { NothingElseTheme { NothingElseApp() } }
     }
 }
@@ -28,36 +42,49 @@ private fun NothingElseApp(notesViewModel: NotesViewModel = viewModel()) {
     val favorites by notesViewModel.favoriteNotes.collectAsStateWithLifecycle()
     var openNote by remember { mutableStateOf<Note?>(null) }
 
-    openNote?.let { note ->
-        EditNoteScreen(
-            note = note,
-            onBack = { editedNote ->
-                notesViewModel.save(editedNote)
-                openNote = null
-            },
-            onAutoSave = { editedNote ->
-                openNote = editedNote
-                notesViewModel.save(editedNote)
-            },
-            onDelete = { noteToDelete ->
-                notesViewModel.delete(noteToDelete)
-                openNote = null
-            },
-            onTogglePinned = { editedNote ->
-                openNote = editedNote.copy(pinned = !editedNote.pinned)
-                notesViewModel.setPinned(editedNote, !editedNote.pinned)
-            },
-            onToggleFavorite = { editedNote ->
-                notesViewModel.setFavorite(editedNote, !editedNote.archived)
-            }
-        )
-    } ?: NotesHomeScreen(
-        notes = notes,
-        favoriteNotes = favorites,
-        onOpenNote = { openNote = it },
-        onCreateNote = { notesViewModel.create { openNote = it } },
-        onDeleteNote = notesViewModel::delete,
-        onSetPinned = notesViewModel::setPinned,
-        onSetFavorite = notesViewModel::setFavorite
-    )
+    AnimatedContent(
+        targetState = openNote,
+        contentKey = { it?.id ?: -1L },
+        transitionSpec = {
+            (fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 12 }) togetherWith
+                (fadeOut(tween(120)) + slideOutVertically(tween(180)) { -it / 16 })
+        },
+        label = "note-navigation"
+    ) { note ->
+        if (note != null) {
+            EditNoteScreen(
+                note = note,
+                onBack = { editedNote ->
+                    notesViewModel.save(editedNote)
+                    openNote = null
+                },
+                onAutoSave = { editedNote ->
+                    openNote = editedNote
+                    notesViewModel.save(editedNote)
+                },
+                onDelete = { noteToDelete ->
+                    notesViewModel.delete(noteToDelete)
+                    openNote = null
+                },
+                onTogglePinned = { editedNote ->
+                    openNote = editedNote.copy(pinned = !editedNote.pinned)
+                    notesViewModel.setPinned(editedNote, !editedNote.pinned)
+                },
+                onToggleFavorite = { editedNote ->
+                    openNote = editedNote.copy(archived = !editedNote.archived)
+                    notesViewModel.setFavorite(editedNote, !editedNote.archived)
+                }
+            )
+        } else {
+            NotesHomeScreen(
+                notes = notes,
+                favoriteNotes = favorites,
+                onOpenNote = { openNote = it },
+                onCreateNote = { notesViewModel.create { openNote = it } },
+                onDeleteNote = notesViewModel::delete,
+                onSetPinned = notesViewModel::setPinned,
+                onSetFavorite = notesViewModel::setFavorite
+            )
+        }
+    }
 }

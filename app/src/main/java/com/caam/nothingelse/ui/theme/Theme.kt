@@ -25,7 +25,7 @@ private val LightPalette = lightColorScheme(
 private val DarkPalette = darkColorScheme(
     primary = Color(0xFF9DCEFF), onPrimary = Color(0xFF003258), background = Night,
     surface = Color(0xFF191B1E), surfaceVariant = Color(0xFF24272B),
-    onBackground = Color(0xFFF4F1EA), onSurface = Color(0xFFF4F1EA),
+    onBackground = Color.White, onSurface = Color.White,
     onSurfaceVariant = Color(0xFFC4C7C9), outline = Color(0xFF909498),
     outlineVariant = Color(0xFF41454A), error = Color(0xFFFFB4AB), onError = Color(0xFF690005)
 )

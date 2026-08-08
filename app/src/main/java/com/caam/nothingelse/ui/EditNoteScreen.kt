@@ -2,8 +2,12 @@ package com.caam.nothingelse.ui
 
 import android.content.Intent
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,8 +15,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -69,9 +75,9 @@ fun EditNoteScreen(
         }
     }
     BackHandler { onBack(editedNote()) }
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).navigationBarsPadding()) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp),
+            Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 10.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(onClick = { onBack(editedNote()) }) {
@@ -88,7 +94,17 @@ fun EditNoteScreen(
                     Icon(Icons.Default.Share, "Share note", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 IconButton(onClick = { onToggleFavorite(editedNote()) }) {
-                    Icon(if (note.archived) Icons.Default.Star else Icons.Outlined.StarBorder, if (note.archived) "Remove from favorites" else "Add to favorites", tint = favoriteTint)
+                    AnimatedContent(
+                        targetState = note.archived,
+                        transitionSpec = { fadeIn(tween(150)) togetherWith fadeOut(tween(100)) },
+                        label = "favorite-icon"
+                    ) { favorite ->
+                        Icon(
+                            if (favorite) Icons.Default.Star else Icons.Outlined.StarBorder,
+                            if (favorite) "Remove from favorites" else "Add to favorites",
+                            tint = favoriteTint
+                        )
+                    }
                 }
                 IconButton(onClick = { onDelete(editedNote()) }) {
                     Icon(Icons.Default.DeleteOutline, "Delete note", tint = MaterialTheme.colorScheme.error)
