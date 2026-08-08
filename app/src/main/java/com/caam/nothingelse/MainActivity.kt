@@ -7,10 +7,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.SystemBarStyle
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideIntoContainer
+import androidx.compose.animation.slideOutOfContainer
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,9 +47,13 @@ private fun NothingElseApp(notesViewModel: NotesViewModel = viewModel()) {
         targetState = openNote,
         contentKey = { it?.id ?: -1L },
         transitionSpec = {
-            (fadeIn(animationSpec = tween(240), initialAlpha = 0.35f) +
-                scaleIn(animationSpec = tween(240), initialScale = 0.985f)) togetherWith
-                ExitTransition.None
+            if (targetState != null) {
+                slideIntoContainer(SlideDirection.Left, animationSpec = tween(300)) togetherWith
+                    ExitTransition.None
+            } else {
+                EnterTransition.None togetherWith
+                    slideOutOfContainer(SlideDirection.Right, animationSpec = tween(300))
+            }
         },
         label = "note-navigation"
     ) { note ->
