@@ -37,6 +37,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Note
 import androidx.compose.material.icons.filled.PushPin
@@ -93,6 +94,8 @@ private fun NotesApp(notesViewModel: NotesViewModel = viewModel()) {
     val archivedNotes by notesViewModel.archivedNotes.collectAsStateWithLifecycle()
     var editingNote by remember { mutableStateOf<Note?>(null) }
     var deletingNote by remember { mutableStateOf<Note?>(null) }
+    var renamingNote by remember { mutableStateOf<Note?>(null) }
+    var renameText by remember { mutableStateOf("") }
     var showArchived by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var refreshing by remember { mutableStateOf(false) }
@@ -127,7 +130,7 @@ private fun NotesApp(notesViewModel: NotesViewModel = viewModel()) {
         ) {
             Column(Modifier.fillMaxSize()) {
                 HomeHeader(
-                    noteCount = visibleNotes.size,
+                    notes = visibleNotes,
                     showingArchive = showArchived,
                     onArchiveClick = { showArchived = !showArchived }
                 )
@@ -144,6 +147,7 @@ private fun NotesApp(notesViewModel: NotesViewModel = viewModel()) {
                                 note = note,
                                 query = query,
                                 onClick = { editingNote = note },
+                                onRename = { renamingNote = note; renameText = note.title },
                                 onDelete = { deletingNote = note },
                                 onTogglePinned = { notesViewModel.setPinned(note, !note.pinned) },
                                 onArchive = { notesViewModel.setArchived(note, !note.archived) }
@@ -178,10 +182,36 @@ private fun NotesApp(notesViewModel: NotesViewModel = viewModel()) {
             dismissButton = { TextButton(onClick = { deletingNote = null }) { Text("Cancel") } }
         )
     }
+
+    renamingNote?.let { note ->
+        AlertDialog(
+            onDismissRequest = { renamingNote = null },
+            title = { Text("Rename note") },
+            text = {
+                TextField(
+                    value = renameText,
+                    onValueChange = { renameText = it },
+                    singleLine = true,
+                    placeholder = { Text("Title") },
+                    colors = TextFieldDefaults.colors(
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    notesViewModel.save(note.copy(title = renameText))
+                    renamingNote = null
+                }) { Text("Rename") }
+            },
+            dismissButton = { TextButton(onClick = { renamingNote = null }) { Text("Cancel") } }
+        )
+    }
 }
 
 @Composable
-private fun HomeHeader(noteCount: Int, showingArchive: Boolean, onArchiveClick: () -> Unit) {
+private fun HomeHeader(notes: List<Note>, showingArchive: Boolean, onArchiveClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp, top = 28.dp),
         verticalAlignment = Alignment.Top,
@@ -191,7 +221,7 @@ private fun HomeHeader(noteCount: Int, showingArchive: Boolean, onArchiveClick: 
             Text(if (showingArchive) "Archive" else "Nothing Else", style = MaterialTheme.typography.displaySmall)
             Spacer(Modifier.height(2.dp))
             Text(
-                if (showingArchive) "$noteCount archived" else "$noteCount ${if (noteCount == 1) "Note" else "Notes"}",
+                noteSummary(notes, showingArchive),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -207,7 +237,7 @@ private fun AppleSearchBar(query: String, onQueryChange: (String) -> Unit) {
     TextField(
         value = query,
         onValueChange = onQueryChange,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 20.dp).height(44.dp).clip(RoundedCornerShape(12.dp)),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 18.dp).height(44.dp).clip(RoundedCornerShape(12.dp)),
         placeholder = { Text("Search", style = MaterialTheme.typography.bodyLarge) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
         singleLine = true,
@@ -242,7 +272,7 @@ private fun EmptyState(showingArchive: Boolean, filtering: Boolean) {
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
 @Composable
-private fun AppleNoteRow(note: Note, query: String, onClick: () -> Unit, onDelete: () -> Unit, onTogglePinned: () -> Unit, onArchive: () -> Unit) {
+private fun AppleNoteRow(note: Note, query: String, onClick: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit, onTogglePinned: () -> Unit, onArchive: () -> Unit) {
     var menuExpanded by remember { mutableStateOf(false) }
     val dismissState = rememberDismissState(confirmStateChange = { value ->
         if (value == DismissValue.DismissedToStart) onDelete()
@@ -271,9 +301,16 @@ private fun AppleNoteRow(note: Note, query: String, onClick: () -> Unit, onDelet
                     Spacer(Modifier.height(7.dp))
                     Text(relativeDate(note.updatedAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))
+                )
                 DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)) {
                     DropdownMenuItem(text = { Text(if (note.pinned) "Unpin" else "Pin") }, leadingIcon = { Icon(Icons.Default.PushPin, null) }, onClick = { menuExpanded = false; onTogglePinned() })
-                    DropdownMenuItem(text = { Text("Rename") }, leadingIcon = { Icon(Icons.Default.MoreHoriz, null) }, onClick = { menuExpanded = false; onClick() })
+                     DropdownMenuItem(text = { Text("Rename") }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { menuExpanded = false; onRename() })
                     DropdownMenuItem(text = { Text(if (note.archived) "Restore" else "Archive") }, leadingIcon = { Icon(if (note.archived) Icons.Default.Unarchive else Icons.Default.Archive, null) }, onClick = { menuExpanded = false; onArchive() })
                     ShareMenuItem(note)
                     DropdownMenuItem(text = { Text("Delete", color = MaterialTheme.colorScheme.error) }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }, onClick = { menuExpanded = false; onDelete() })
@@ -328,4 +365,11 @@ private fun relativeDate(time: Long): String {
         now - time < day * 2 -> "Yesterday"
         else -> DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(time))
     }
+}
+
+private fun noteSummary(notes: List<Note>, showingArchive: Boolean): String {
+    val count = notes.size
+    val countLabel = if (showingArchive) "$count archived" else "$count ${if (count == 1) "Note" else "Notes"}"
+    val newest = notes.maxOfOrNull { it.updatedAt } ?: return countLabel
+    return "$countLabel · Updated ${relativeDate(newest)}"
 }

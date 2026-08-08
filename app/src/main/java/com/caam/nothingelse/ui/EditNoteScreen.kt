@@ -1,5 +1,6 @@
 package com.caam.nothingelse.ui
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -37,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.caam.nothingelse.data.Note
@@ -55,6 +58,7 @@ fun EditNoteScreen(
     var body by remember(note.id) { mutableStateOf(note.body) }
     var menuExpanded by remember { mutableStateOf(false) }
     val titleFocus = remember { FocusRequester() }
+    val context = LocalContext.current
 
     LaunchedEffect(note.id) { titleFocus.requestFocus() }
     LaunchedEffect(title, body) {
@@ -74,6 +78,19 @@ fun EditNoteScreen(
             onDismiss = { menuExpanded = false },
             onPin = { menuExpanded = false; onTogglePinned() },
             onArchive = { menuExpanded = false; onToggleArchived(); onBack() },
+            onShare = {
+                menuExpanded = false
+                val content = listOf(title, body).filter { it.isNotBlank() }.joinToString("\n\n")
+                context.startActivity(
+                    Intent.createChooser(
+                        Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, content)
+                        },
+                        "Share note"
+                    )
+                )
+            },
             onDelete = { menuExpanded = false; onDelete() }
         )
         TextField(
@@ -107,6 +124,7 @@ private fun EditorNavigation(
     onDismiss: () -> Unit,
     onPin: () -> Unit,
     onArchive: () -> Unit,
+    onShare: () -> Unit,
     onDelete: () -> Unit
 ) {
     Row(
@@ -130,6 +148,11 @@ private fun EditorNavigation(
                     text = { Text(if (archived) "Restore" else "Archive") },
                     leadingIcon = { Icon(if (archived) Icons.Default.Unarchive else Icons.Default.Archive, null) },
                     onClick = onArchive
+                )
+                DropdownMenuItem(
+                    text = { Text("Share") },
+                    leadingIcon = { Icon(Icons.Default.Share, null) },
+                    onClick = onShare
                 )
                 DropdownMenuItem(
                     text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
