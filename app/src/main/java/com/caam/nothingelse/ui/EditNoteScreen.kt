@@ -330,8 +330,8 @@ fun EditNoteScreen(
                 .padding(horizontal = 24.dp, vertical = 6.dp)
                 .clickable(indication = null, interactionSource = bodyTapInteractionSource) {
                     showFormatPanel = false
-                    val first = paragraphs.firstOrNull() ?: return@clickable
-                    requestCaret(first.id, 0)
+                    val last = paragraphs.lastOrNull() ?: return@clickable
+                    requestCaret(last.id, last.text.length)
                 }
         ) {
             val showBodyPlaceholder = paragraphs.all { it.text.isBlank() }
