@@ -78,7 +78,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -324,19 +323,16 @@ fun EditNoteScreen(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 2.dp)
         )
         Spacer(Modifier.height(18.dp))
-        val focusManager = LocalFocusManager.current
-        val bodyFocusRequester = remember { FocusRequester() }
+        val bodyTapInteractionSource = remember { MutableInteractionSource() }
         Column(
             Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
                 .semantics { contentDescription = "Note body" }
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) {
-                    focusManager.clearFocus()
-                    bodyFocusRequester.requestFocus()
-                }
                 .padding(horizontal = 24.dp, vertical = 6.dp)
+                .clickable(indication = null, interactionSource = bodyTapInteractionSource) {
+                    showFormatPanel = false
+                    val first = paragraphs.firstOrNull() ?: return@clickable
+                    requestCaret(first.id, 0)
+                }
         ) {
             val showBodyPlaceholder = paragraphs.all { it.text.isBlank() }
             fun focusBodyEnd() {
@@ -548,17 +544,16 @@ private fun QuietIconButton(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MetadataBlock(metadata: String, notebook: String, saveStatus: String, onNotebookClick: () -> Unit, modifier: Modifier = Modifier) {
-    FlowRow(modifier.fillMaxWidth(), verticalArrangement = Arrangement.Center, horizontalArrangement = Arrangement.Start) {
+    FlowRow(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
         Text(metadata, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("  •  ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-        Box(modifier = Modifier.align(Alignment.CenterVertically).clip(RoundedCornerShape(8.dp)).quietClickable(onClick = onNotebookClick).padding(horizontal = 3.dp, vertical = 4.dp)) {
-            Text(
-                notebook,
-                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-        Text("  •  $saveStatus", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("  \u2022  ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        Text(
+            notebook,
+            modifier = Modifier.clip(RoundedCornerShape(8.dp)).quietClickable(onClick = onNotebookClick).padding(horizontal = 3.dp),
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text("  \u2022  $saveStatus", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
