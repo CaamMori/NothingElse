@@ -543,7 +543,7 @@ private fun MetadataBlock(metadata: String, notebook: String, saveStatus: String
         Text("  •  ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
         Text(
             notebook,
-            modifier = Modifier.clip(RoundedCornerShape(8.dp)).quietClickable(onClick = onNotebookClick).padding(horizontal = 3.dp, vertical = 4.dp),
+            modifier = Modifier.clip(RoundedCornerShape(8.dp)).quietClickable(onClick = onNotebookClick).padding(horizontal = 3.dp, vertical = 4.dp).align(Alignment.CenterVertically),
             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
             color = MaterialTheme.colorScheme.primary
         )
