@@ -1,0 +1,15 @@
+<resources>
+    <string name="create_title">Create</string>
+    <string name="create_blank_note">Blank Note</string>
+    <string name="create_blank_note_description">Start with an empty page</string>
+    <string name="create_import">Import</string>
+    <string name="create_import_description">Paste text into a new note</string>
+    <string name="import_title">Import text</string>
+    <string name="import_placeholder">Paste multiline text to import</string>
+    <string name="import_action">Import</string>
+    <string name="create_action">Create</string>
+    <string name="cancel_action">Cancel</string>
+    <string name="creation_in_progress">Creating note</string>
+    <string name="error_empty_import">Paste some text before importing.</string>
+    <string name="error_note_creation">Could not create the note. Please try again.</string>
+</resources>

@@ -1,0 +1,26 @@
+.gradle/
+/build/
+/app/build/
+/.idea/
+/.gradle/
+local.properties
+/.gradle/
+/.idea/
+**/build/
+*.iml
+/.cxx/
+/.externalNativeBuild/
+
+# Ignore signing and keystore artifacts generated or stored locally
+signing/
+*.jks
+*.base64
+
+
+# OpenCode task temp files
+.oc/
+
+# Build artifacts
+*.apk
+*.zip
+NotesHomeScreen.kt.bak.*

@@ -1,0 +1,21 @@
+<resources>
+    <!-- Main app theme (after splash) -->
+    <style name="Theme.NothingElse" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/icon_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!--
+    Launch theme: must parent Theme.SplashScreen so core-splashscreen
+    attributes are resolved. Background + icon bg must match adaptive
+    icon (#1B1D25) or the system zoom shows a light fringe on the logo.
+    Use a pre-composited drawable (not adaptive mipmap) to avoid mask AA.
+    -->
+    <style name="Theme.NothingElse.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/icon_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_icon</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/icon_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.NothingElse</item>
+    </style>
+</resources>
