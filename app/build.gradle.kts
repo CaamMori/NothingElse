@@ -12,8 +12,8 @@ android {
         applicationId = "com.caam.nothingelse"
         minSdk = 21
         targetSdk = 34
-        versionCode = 58
-        versionName = "0.1.21-alpha"
+        versionCode = 59
+        versionName = "0.1.22-alpha"
     }
 
     buildTypes {
