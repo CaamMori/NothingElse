@@ -16,6 +16,15 @@ android {
         versionName = "0.1.22-alpha"
     }
 
+    // Align the release APK filename with the git tag convention:
+    // NothingElse-v<versionName>.apk  (e.g. NothingElse-v0.1.22-alpha.apk)
+    applicationVariants.all {
+        outputs.all {
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
+                "NothingElse-v${versionName}.apk"
+        }
+    }
+
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
