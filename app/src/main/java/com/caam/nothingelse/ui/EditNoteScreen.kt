@@ -79,6 +79,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -742,6 +743,7 @@ private fun ParagraphEditor(
             localValue.selection.start.coerceIn(0, paragraph.text.length)
         )
     }
+    val keyboardController = LocalSoftwareKeyboardController.current
     // Keyed on the request token so repeated requests to the same offset still apply.
     LaunchedEffect(requestedFocus?.token) {
         val request = requestedFocus ?: return@LaunchedEffect
@@ -750,6 +752,10 @@ private fun ParagraphEditor(
             request.cursorOffset.coerceIn(0, paragraph.text.length)
         )
         focusRequester.requestFocus()
+        // requestFocus() is a no-op when the target field is already focused (the
+        // common blank-tap case: the caret is already lit on that same paragraph),
+        // so Android never re-shows the IME. Explicitly show the keyboard here.
+        keyboardController?.show()
         onFocusRequestHandled()
     }
     val baseStyle = paragraphTextStyle(paragraph.style)
